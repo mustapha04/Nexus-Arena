@@ -1,0 +1,197 @@
+{
+  "entities": {
+    "profiles": {
+      "title": "User Profile",
+      "description": "Stores user account information and roles.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "username": { "type": "string" },
+        "avatar_url": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "isBanned": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "username", "role", "created_at"]
+    },
+    "lists": {
+      "title": "Custom Game List",
+      "description": "User-created collections of games.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "games": { "type": "array", "items": { "type": "string" } },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "title", "games", "created_at"]
+    },
+    "game_stats": {
+      "title": "Game Statistics",
+      "description": "Aggregated stats for games (views, etc).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "game_id": { "type": "string" },
+        "views": { "type": "number" },
+        "searches": { "type": "number" }
+      },
+      "required": ["game_id"]
+    },
+    "homepage_config": {
+      "title": "Homepage Configuration",
+      "description": "Admin settings for homepage layout and featured content.",
+      "type": "object",
+      "properties": {
+        "hero_banners": { "type": "array", "items": { "type": "object" } },
+        "featured_games": { "type": "array", "items": { "type": "string" } },
+        "trending_sections": { "type": "array", "items": { "type": "string" } },
+        "announcements": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "favorites": {
+      "title": "Favorite Game",
+      "description": "Games saved as favorites by users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "game_id": { "type": "string" },
+        "title": { "type": "string" },
+        "image": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "game_id", "title", "image", "created_at"]
+    },
+    "wishlists": {
+      "title": "Wishlist Item",
+      "description": "Games on user wishlists.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "game_id": { "type": "string" },
+        "title": { "type": "string" },
+        "image": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "game_id", "title", "image", "created_at"]
+    },
+    "ratings": {
+      "title": "Game Rating",
+      "description": "User ratings for games.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "game_id": { "type": "string" },
+        "rating": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "game_id", "rating", "created_at"]
+    },
+    "comments": {
+      "title": "Game Comment",
+      "description": "User comments and reviews on games.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "username": { "type": "string" },
+        "game_id": { "type": "string" },
+        "content": { "type": "string" },
+        "likes": { "type": "number" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "username", "game_id", "content", "created_at"]
+    },
+    "affiliate_links": {
+      "title": "Affiliate Link",
+      "description": "Links to external stores managed by admins.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "game_id": { "type": "string" },
+        "platform": { "type": "string" },
+        "affiliate_url": { "type": "string" }
+      },
+      "required": ["game_id", "platform", "affiliate_url"]
+    },
+    "affiliate_clicks": {
+      "title": "Affiliate Click",
+      "description": "Tracking clicks on affiliate links.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "game_id": { "type": "string" },
+        "platform": { "type": "string" },
+        "clicked_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["game_id", "platform", "clicked_at"]
+    },
+    "notifications": {
+      "title": "Notification",
+      "description": "In-app notifications for users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "type": { "type": "string" },
+        "message": { "type": "string" },
+        "is_read": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "type", "message", "is_read", "created_at"]
+    }
+  },
+  "firestore": {
+    "/profiles/{userId}": {
+      "schema": "profiles",
+      "description": "User profiles"
+    },
+    "/favorites/{favoriteId}": {
+      "schema": "favorites",
+      "description": "User favorites"
+    },
+    "/wishlists/{wishlistId}": {
+      "schema": "wishlists",
+      "description": "User wishlists"
+    },
+    "/ratings/{ratingId}": {
+      "schema": "ratings",
+      "description": "User ratings"
+    },
+    "/comments/{commentId}": {
+      "schema": "comments",
+      "description": "Game comments"
+    },
+    "/affiliate_links/{linkId}": {
+      "schema": "affiliate_links",
+      "description": "Affiliate links"
+    },
+    "/affiliate_clicks/{clickId}": {
+      "schema": "affiliate_clicks",
+      "description": "Affiliate click tracking"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "notifications",
+      "description": "User notifications"
+    },
+    "/lists/{listId}": {
+      "schema": "lists",
+      "description": "Custom game lists"
+    },
+    "/game_stats/{statId}": {
+      "schema": "game_stats",
+      "description": "Game statistics"
+    },
+    "/homepage_config/{configId}": {
+      "schema": "homepage_config",
+      "description": "Homepage configuration"
+    }
+  }
+}

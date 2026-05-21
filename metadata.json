@@ -1,0 +1,8 @@
+{
+  "name": "Nexus Arena",
+  "description": "A premium AI-powered gaming discovery and community platform featuring game reviews, trailers, deals, and personalized AI recommendations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

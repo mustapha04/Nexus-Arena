@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-bg: #05060f;
+  --color-glass: rgba(255, 255, 255, 0.05);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-accent-blue: #3b82f6;
+  --color-accent-purple: #9333ea;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-bg text-slate-100 font-sans;
+  }
+}
+
+.frosted-glass {
+  @apply bg-white/5 border border-white/10 backdrop-blur-md;
+}
+
+.mesh-bg-blue {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0) 70%);
+}
+
+.mesh-bg-purple {
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, rgba(147, 51, 234, 0) 70%);
+}
