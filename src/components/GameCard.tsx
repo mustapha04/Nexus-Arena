@@ -3,22 +3,26 @@ import { Game } from '../types';
 import { Link } from 'react-router-dom';
 import { Star, Monitor, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import { getSlug } from '../lib/utils';
 
 interface GameCardProps {
   game: Game;
 }
 
 export default function GameCard({ game }: GameCardProps) {
+  const cleanSlug = getSlug(game.title);
+
   return (
     <motion.div
       whileHover={{ y: -5 }}
       className="group relative bg-white/5 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 transition-all hover:bg-white/10 hover:border-blue-500/30 hover:shadow-[0_0_40px_rgba(59,130,246,0.15)] ring-1 ring-transparent hover:ring-blue-500/20"
     >
-      <Link to={`/game/${game.id}`} className="block">
+      <Link to={`/games/${cleanSlug}`} className="block">
         <div className="relative aspect-video overflow-hidden p-3 pb-0">
           <img
             src={game.thumbnail}
-            alt={game.title}
+            alt={`${game.title} - Free to Play ${game.genre} Game for ${game.platform}`}
+            loading="lazy"
             className="w-full h-full object-cover rounded-xl transition-transform duration-700 group-hover:scale-105"
             referrerPolicy="no-referrer"
           />
@@ -55,3 +59,4 @@ export default function GameCard({ game }: GameCardProps) {
     </motion.div>
   );
 }
+

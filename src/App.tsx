@@ -10,10 +10,63 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import { AnimatePresence, motion } from 'motion/react';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 function AppContent() {
   const location = useLocation();
+  const { isFirebaseReady } = useAuth();
+
+  // Dynamic Google Analytics injector
+  React.useEffect(() => {
+    if (isFirebaseReady) {
+      const loadGA = async () => {
+        try {
+          const { db } = await import('./lib/firebase');
+          const { doc, getDoc } = await import('firebase/firestore');
+          const docSnap = await getDoc(doc(db, 'homepage_config', 'main'));
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data && data.ga_tracking_id) {
+              const trackingId = data.ga_tracking_id;
+              
+              if (!document.getElementById('ga-gtag-script')) {
+                const script1 = document.createElement('script');
+                script1.id = 'ga-gtag-script';
+                script1.async = true;
+                script1.src = `https://www.googletagmanager.com/gtag/js?id=${trackingId}`;
+                document.head.appendChild(script1);
+
+                const script2 = document.createElement('script');
+                script2.innerHTML = `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){window.dataLayer.push(arguments);}
+                  window.gtag = gtag;
+                  gtag('js', new Date());
+                  gtag('config', '${trackingId}', {
+                    page_path: window.location.pathname,
+                  });
+                `;
+                document.head.appendChild(script2);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to dynamically initialize Google Analytics:", e);
+        }
+      };
+      loadGA();
+    }
+  }, [isFirebaseReady]);
+
+  // Route tracker
+  React.useEffect(() => {
+    if (typeof (window as any).gtag === 'function') {
+      (window as any).gtag('event', 'page_view', {
+        page_path: location.pathname,
+        page_title: document.title,
+      });
+    }
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-brand-bg relative overflow-x-hidden">
@@ -36,6 +89,11 @@ function AppContent() {
               <Route path="/" element={<Home />} />
               <Route path="/search" element={<Search />} />
               <Route path="/game/:id" element={<GameDetails />} />
+              <Route path="/games/:slug" element={<GameDetails />} />
+              <Route path="/genre/:genre" element={<Search />} />
+              <Route path="/trending" element={<Search type="trending" />} />
+              <Route path="/top-rated" element={<Search type="top-rated" />} />
+              <Route path="/upcoming" element={<Search type="upcoming" />} />
               <Route path="/deals" element={<Deals />} />
               <Route path="/login" element={<Login />} />
               <Route path="/admin-login" element={<Login />} />

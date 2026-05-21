@@ -25,6 +25,64 @@ async function startServer() {
 
   // API Routes
   
+  // Dynamic SEO XML Sitemap and robots.txt
+  app.get("/sitemap.xml", async (req, res) => {
+    try {
+      const response = await axios.get("https://www.freetogame.com/api/games");
+      const games = response.data || [];
+      const host = req.headers.host || "nexusarena.com";
+      const baseUrl = `https://${host}`;
+
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+      xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+      const staticPaths = ["", "/search", "/trending", "/top-rated", "/upcoming", "/deals", "/login"];
+      staticPaths.forEach(p => {
+        xml += `  <url>\n`;
+        xml += `    <loc>${baseUrl}${p}</loc>\n`;
+        xml += `    <changefreq>daily</changefreq>\n`;
+        xml += `    <priority>${p === "" ? "1.0" : "0.8"}</priority>\n`;
+        xml += `  </url>\n`;
+      });
+
+      const getSlug = (title: string): string => {
+        return title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)+/g, '');
+      };
+
+      games.slice(0, 150).forEach((game: any) => {
+        xml += `  <url>\n`;
+        xml += `    <loc>${baseUrl}/games/${getSlug(game.title)}</loc>\n`;
+        xml += `    <changefreq>weekly</changefreq>\n`;
+        xml += `    <priority>0.6</priority>\n`;
+        xml += `  </url>\n`;
+      });
+
+      xml += `</urlset>`;
+      res.header("Content-Type", "application/xml");
+      res.send(xml);
+    } catch (error) {
+      console.error("Sitemap creation failed", error);
+      res.header("Content-Type", "application/xml");
+      res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://nexusarena.com/</loc></url></urlset>`);
+    }
+  });
+
+  app.get("/robots.txt", (req, res) => {
+    const host = req.headers.host || "nexusarena.com";
+    const baseUrl = `https://${host}`;
+
+    res.header("Content-Type", "text/plain");
+    res.send(`User-agent: *
+Allow: /
+Disallow: /admin-dashboard
+Disallow: /admin-login
+
+Sitemap: ${baseUrl}/sitemap.xml`);
+  });
+
   // Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });

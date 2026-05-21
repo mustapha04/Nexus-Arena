@@ -2,17 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 1. Master Deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // 2. Helper Primitives
+    // 1. Helper Primitives
     function isSignedIn() { return request.auth != null; }
-    function isNotBanned() { return isSignedIn() && (!exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) || get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.isBanned != true); }
+    function isNotBanned() { return isSignedIn() && (!exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) || get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('isBanned', false) != true); }
     function isVerified() { return isSignedIn() && isNotBanned(); }
     function isOwner(userId) { return isSignedIn() && (request.auth.uid == userId); }
-    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin'; }
+    function isAdmin() { return isSignedIn() && (request.auth.token.email == 'mustaphaelibrahimi6@gmail.com' || (exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', 'user') == 'admin')); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
@@ -45,17 +40,17 @@ service cloud.firestore {
 
     // Favorites & Wishlists
     match /favorites/{favId} {
-      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
       allow get: if isSignedIn();
       allow create: if isVerified() && incoming().user_id == request.auth.uid;
-      allow delete: if isOwner(existing().user_id);
+      allow delete: if isOwner(existing().user_id) || isAdmin();
     }
     
     match /wishlists/{wishId} {
-      allow list: if isSignedIn() && resource.data.user_id == request.auth.uid;
+      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
       allow get: if isSignedIn();
       allow create: if isVerified() && incoming().user_id == request.auth.uid;
-      allow delete: if isOwner(existing().user_id);
+      allow delete: if isOwner(existing().user_id) || isAdmin();
     }
 
     // Game Stats

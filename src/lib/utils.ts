@@ -12,3 +12,11 @@ export function formatDate(dateStr: string) {
     year: 'numeric'
   });
 }
+
+export function getSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+}
+

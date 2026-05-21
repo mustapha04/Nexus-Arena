@@ -110,11 +110,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const errorMessage = error.message || "";
       
-      if (error.code === 'auth/popup-blocked') {
+      if (error.code === 'auth/unauthorized-domain') {
+        const currentDomain = window.location.hostname;
+        alert(`domain authorization error!
+
+To fix this:
+1. Go to your Firebase Console (https://console.firebase.google.com/)
+2. Open your project: "nexusarena-c0d15"
+3. Go to "Authentication" -> "Settings" -> "Authorized Domains"
+4. Add this domain to your authorized list: 
+   ${currentDomain}
+
+Once added, refresh this page and try logging in again!`);
+      } else if (error.code === 'auth/popup-blocked') {
         alert("The sign-in popup was blocked. Please allow popups for this site or open the app in a new tab to sign in.");
       } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/user-cancelled') {
-        // User closed the popup, no need for a scary alert but we can log it
-        console.log("Sign-in cancelled by user.");
+        // Safe check for iframe presence
+        let isInIframe = false;
+        try {
+          isInIframe = window.self !== window.top;
+        } catch (e) {
+          isInIframe = true;
+        }
+
+        if (isInIframe) {
+          alert("Sign-in popup closed. Browser privacy policies block authentication within preview screens. Please click 'Open in New Tab' (top-right of your preview) to sign in safely!");
+        } else {
+          console.log("Sign-in cancelled by user.");
+        }
       } else if (error.code === 'auth/cancelled-popup-request') {
         console.log("Multiple popup requests detected. Previous one cancelled.");
       } else if (errorMessage.includes("iframe")) {

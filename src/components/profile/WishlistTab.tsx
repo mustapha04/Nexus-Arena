@@ -16,12 +16,13 @@ export default function WishlistTab() {
     if (!user) return;
     const q = query(
       collection(db, 'wishlists'),
-      where('user_id', '==', user.uid),
-      orderBy('created_at', 'desc')
+      where('user_id', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WishlistItem)));
+      const raw = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WishlistItem));
+      const sorted = raw.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      setItems(sorted);
       setLoading(false);
     });
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, Github, MessageSquare, ShieldCheck, Mail, ArrowRight } from 'lucide-react';
+import { LogIn, Github, MessageSquare, ShieldCheck, Mail, ArrowRight, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -10,6 +10,14 @@ export default function Login() {
   const { pathname } = useLocation();
 
   const isAdminPath = pathname === '/admin-login';
+
+  // Check if inside an iframe
+  let isInIframe = false;
+  try {
+    isInIframe = window.self !== window.top;
+  } catch (e) {
+    isInIframe = true;
+  }
 
   React.useEffect(() => {
     if (user) {
@@ -48,6 +56,19 @@ export default function Login() {
                  : 'Join the elite gaming community. Your progress, favorites, and AI insights await.'}
              </p>
           </div>
+
+          {isInIframe && (
+            <div className="mb-8 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl text-yellow-400 text-xs leading-relaxed space-y-2">
+              <div className="flex items-center gap-2 font-black uppercase tracking-widest text-[10px]">
+                <ExternalLink className="w-4 h-4 text-yellow-400" />
+                <span>Preview Mode Warning</span>
+              </div>
+              <p className="font-medium opacity-90">
+                Google Authentication is blocked inside iframe preview screens by modern web browsers. 
+                Please click the <strong className="text-white">"Open in New Tab"</strong> button in the top right of your preview tab to sign in successfully.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-4">
             {!isFirebaseReady ? (

@@ -17,12 +17,14 @@ interface Props {
 }
 
 export default function CommentSection({ gameId }: Props) {
-  const { user, profile } = useAuth();
+  const { user, profile, isFirebaseReady } = useAuth();
   const [comments, setComments] = React.useState<Comment[]>([]);
   const [newComment, setNewComment] = React.useState('');
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
+    if (!isFirebaseReady || !db) return;
+
     const q = query(
       collection(db, 'comments'),
       where('game_id', '==', gameId),
@@ -36,10 +38,13 @@ export default function CommentSection({ gameId }: Props) {
       })) as Comment[];
       setComments(data);
       setLoading(false);
+    }, (error) => {
+      console.error("Failed to load comments", error);
+      setLoading(false);
     });
 
     return unsubscribe;
-  }, [gameId]);
+  }, [gameId, isFirebaseReady]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

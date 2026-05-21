@@ -15,12 +15,14 @@ interface Props {
 }
 
 export default function RatingSystem({ gameId }: Props) {
-  const { user } = useAuth();
+  const { user, isFirebaseReady } = useAuth();
   const [ratings, setRatings] = React.useState<Rating[]>([]);
   const [userRating, setUserRating] = React.useState<number | null>(null);
   const [hoverRating, setHoverRating] = React.useState<number | null>(null);
 
   React.useEffect(() => {
+    if (!isFirebaseReady || !db) return;
+
     const q = query(
       collection(db, 'ratings'),
       where('game_id', '==', gameId)
@@ -35,10 +37,12 @@ export default function RatingSystem({ gameId }: Props) {
       
       const current = data.find(r => r.user_id === user?.uid);
       if (current) setUserRating(current.rating);
+    }, (error) => {
+      console.error("Failed to load ratings", error);
     });
 
     return unsubscribe;
-  }, [gameId, user]);
+  }, [gameId, user, isFirebaseReady]);
 
   const handleRate = async (value: number) => {
     if (!user) return;

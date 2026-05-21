@@ -19,12 +19,13 @@ export default function CustomListsTab() {
     if (!user) return;
     const q = query(
       collection(db, 'lists'),
-      where('user_id', '==', user.uid),
-      orderBy('created_at', 'desc')
+      where('user_id', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setLists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameList)));
+      const raw = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameList));
+      const sorted = raw.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      setLists(sorted);
       setLoading(false);
     });
 
