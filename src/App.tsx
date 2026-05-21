@@ -16,45 +16,73 @@ function AppContent() {
   const location = useLocation();
   const { isFirebaseReady } = useAuth();
 
-  // Dynamic Google Analytics injector
+  // Dynamic Google Analytics, Google Search Console, and Bing Webmaster injector
   React.useEffect(() => {
     if (isFirebaseReady) {
-      const loadGA = async () => {
+      const loadTelemetryAndSEO = async () => {
         try {
           const { db } = await import('./lib/firebase');
           const { doc, getDoc } = await import('firebase/firestore');
           const docSnap = await getDoc(doc(db, 'homepage_config', 'main'));
           if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data && data.ga_tracking_id) {
-              const trackingId = data.ga_tracking_id;
-              
-              if (!document.getElementById('ga-gtag-script')) {
-                const script1 = document.createElement('script');
-                script1.id = 'ga-gtag-script';
-                script1.async = true;
-                script1.src = `https://www.googletagmanager.com/gtag/js?id=${trackingId}`;
-                document.head.appendChild(script1);
+            if (data) {
+              // 1. Google Analytics
+              if (data.ga_tracking_id) {
+                const trackingId = data.ga_tracking_id;
+                
+                if (!document.getElementById('ga-gtag-script')) {
+                  const script1 = document.createElement('script');
+                  script1.id = 'ga-gtag-script';
+                  script1.async = true;
+                  script1.src = `https://www.googletagmanager.com/gtag/js?id=${trackingId}`;
+                  document.head.appendChild(script1);
 
-                const script2 = document.createElement('script');
-                script2.innerHTML = `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){window.dataLayer.push(arguments);}
-                  window.gtag = gtag;
-                  gtag('js', new Date());
-                  gtag('config', '${trackingId}', {
-                    page_path: window.location.pathname,
-                  });
-                `;
-                document.head.appendChild(script2);
+                  const script2 = document.createElement('script');
+                  script2.id = 'ga-gtag-init-script';
+                  script2.innerHTML = `
+                    window.dataLayer = window.dataLayer || [];
+                    function gtag(){window.dataLayer.push(arguments);}
+                    window.gtag = gtag;
+                    gtag('js', new Date());
+                    gtag('config', '${trackingId}', {
+                      page_path: window.location.pathname,
+                    });
+                  `;
+                  document.head.appendChild(script2);
+                }
+              }
+
+              // 2. Google Search Console Meta Verification
+              if (data.gsc_verification_id) {
+                let metaGSC = document.getElementById('gsc-verification-meta') as HTMLMetaElement;
+                if (!metaGSC) {
+                  metaGSC = document.createElement('meta');
+                  metaGSC.id = 'gsc-verification-meta';
+                  metaGSC.name = 'google-site-verification';
+                  document.head.appendChild(metaGSC);
+                }
+                metaGSC.content = data.gsc_verification_id;
+              }
+
+              // 3. Bing Webmaster Tools Meta Verification
+              if (data.bing_verification_id) {
+                let metaBing = document.getElementById('bing-verification-meta') as HTMLMetaElement;
+                if (!metaBing) {
+                  metaBing = document.createElement('meta');
+                  metaBing.id = 'bing-verification-meta';
+                  metaBing.name = 'msvalidate.01';
+                  document.head.appendChild(metaBing);
+                }
+                metaBing.content = data.bing_verification_id;
               }
             }
           }
         } catch (e) {
-          console.error("Failed to dynamically initialize Google Analytics:", e);
+          console.error("Failed to dynamically initialize Telemetry and SEO tags:", e);
         }
       };
-      loadGA();
+      loadTelemetryAndSEO();
     }
   }, [isFirebaseReady]);
 
