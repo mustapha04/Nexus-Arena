@@ -4,6 +4,20 @@ import { getFirestore } from 'firebase/firestore';
 
 // Injected by AI Studio after user setup
 const loadConfig = async () => {
+  // Check if client-side Vite environment variables exist (best practice for Vercel)
+  const metaEnv = (import.meta as any).env;
+  if (metaEnv && metaEnv.VITE_FIREBASE_API_KEY) {
+    return {
+      apiKey: metaEnv.VITE_FIREBASE_API_KEY,
+      authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: metaEnv.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: metaEnv.VITE_FIREBASE_APP_ID,
+      measurementId: metaEnv.VITE_FIREBASE_MEASUREMENT_ID
+    };
+  }
+
   try {
     // @ts-ignore
     const config = await import('../../firebase-applet-config.json');
