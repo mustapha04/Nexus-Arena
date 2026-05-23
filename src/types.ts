@@ -37,6 +37,10 @@ export interface UserProfile {
   role: 'user' | 'admin';
   isBanned?: boolean;
   created_at: string;
+  combat_level?: number;
+  artifacts_found?: number;
+  grid_uptime?: string;
+  core_integrity?: string;
 }
 
 export interface FavoriteItem {

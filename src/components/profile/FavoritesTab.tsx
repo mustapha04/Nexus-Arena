@@ -8,12 +8,16 @@ import { Gamepad2, ChevronRight, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function FavoritesTab() {
-  const { user } = useAuth();
+  const { user, isFirebaseReady } = useAuth();
   const [items, setItems] = React.useState<FavoriteItem[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    if (!user) return;
+    if (!isFirebaseReady || !db) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const q = query(
       collection(db, 'favorites'),
       where('user_id', '==', user.uid)
@@ -24,10 +28,13 @@ export default function FavoritesTab() {
       const sorted = raw.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
       setItems(sorted);
       setLoading(false);
+    }, (error) => {
+      console.error("Failed to load favorites:", error);
+      setLoading(false);
     });
 
     return unsubscribe;
-  }, [user]);
+  }, [user, isFirebaseReady]);
 
   if (loading) return (
      <div className="p-12 text-center animate-pulse text-slate-500 font-black uppercase tracking-widest">Accessing Arsenal...</div>

@@ -73,7 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   username: firebaseUser.displayName || 'New User',
                   avatar_url: firebaseUser.photoURL || '',
                   role: isDefaultAdmin ? 'admin' : 'user',
-                  created_at: new Date().toISOString()
+                  created_at: new Date().toISOString(),
+                  combat_level: 42,
+                  artifacts_found: 1284,
+                  grid_uptime: '3,5h',
+                  core_integrity: '100%'
                 };
                 await setDoc(docRef, newProfile);
                 setProfile(newProfile);

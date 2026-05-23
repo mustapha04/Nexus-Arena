@@ -86,10 +86,10 @@ export default function Profile() {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20 md:mb-32">
           {[
-            { label: 'Combat Level', value: '42', icon: Trophy, color: 'text-blue-400' },
-            { label: 'Artifacts Found', value: '1,284', icon: Award, color: 'text-purple-400' },
-            { label: 'Grid Uptime', value: '3,5h', icon: Gamepad2, color: 'text-indigo-400' },
-            { label: 'Core Integrity', value: '100%', icon: Heart, color: 'text-red-400' },
+            { label: 'Combat Level', value: profile?.combat_level?.toString() || '42', icon: Trophy, color: 'text-blue-400' },
+            { label: 'Artifacts Found', value: profile?.artifacts_found !== undefined ? profile.artifacts_found.toLocaleString() : '1,284', icon: Award, color: 'text-purple-400' },
+            { label: 'Grid Uptime', value: profile?.grid_uptime || '3,5h', icon: Gamepad2, color: 'text-indigo-400' },
+            { label: 'Core Integrity', value: profile?.core_integrity || '100%', icon: Heart, color: 'text-red-400' },
           ].map(stat => (
             <div key={stat.label} className="bg-white/5 backdrop-blur-md p-10 rounded-[2.5rem] border border-white/5 text-center transition-all hover:bg-white/10 hover:-translate-y-2 shadow-2xl relative group overflow-hidden">
                <div className="absolute -top-4 -right-4 p-8 opacity-5 group-hover:opacity-10 transition-opacity"><stat.icon className="w-24 h-24" /></div>

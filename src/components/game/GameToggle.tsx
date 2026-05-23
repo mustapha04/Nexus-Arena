@@ -15,13 +15,16 @@ interface Props {
 }
 
 export default function GameToggle({ game, type }: Props) {
-  const { user } = useAuth();
+  const { user, isFirebaseReady } = useAuth();
   const [isActive, setIsActive] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const collectionName = type === 'favorite' ? 'favorites' : 'wishlists';
   const Icon = type === 'favorite' ? Heart : Bookmark;
 
   React.useEffect(() => {
+    if (!isFirebaseReady || !db) {
+      return;
+    }
     if (!user) {
       setLoading(false);
       return;
@@ -37,16 +40,24 @@ export default function GameToggle({ game, type }: Props) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setIsActive(!snapshot.empty);
       setLoading(false);
+    }, (error) => {
+      console.error("Failed to query toggle status:", error);
+      setLoading(false);
     });
 
     return unsubscribe;
-  }, [game.id, user, collectionName]);
+  }, [game.id, user, isFirebaseReady, collectionName]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
         alert('Please log in to save games.');
+        return;
+    }
+
+    if (!isFirebaseReady || !db) {
+        alert('Firebase is still initializing. Please try again in a moment.');
         return;
     }
 

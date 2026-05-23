@@ -19,7 +19,11 @@ service cloud.firestore {
              data.username is string &&
              data.avatar_url is string &&
              data.role in ['user', 'admin'] &&
-             data.created_at is string;
+             data.created_at is string &&
+             (!data.keys().hasAny(['combat_level']) || data.combat_level is int) &&
+             (!data.keys().hasAny(['artifacts_found']) || data.artifacts_found is int) &&
+             (!data.keys().hasAny(['grid_uptime']) || data.grid_uptime is string) &&
+             (!data.keys().hasAny(['core_integrity']) || data.core_integrity is string);
     }
 
     // 4. Match Blocks

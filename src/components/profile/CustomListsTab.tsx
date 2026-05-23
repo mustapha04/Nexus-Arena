@@ -9,14 +9,18 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 
 export default function CustomListsTab() {
-  const { user } = useAuth();
+  const { user, isFirebaseReady } = useAuth();
   const [lists, setLists] = React.useState<GameList[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [showAdd, setShowAdd] = React.useState(false);
   const [newList, setNewList] = React.useState({ title: '', description: '' });
 
   React.useEffect(() => {
-    if (!user) return;
+    if (!isFirebaseReady || !db) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const q = query(
       collection(db, 'lists'),
       where('user_id', '==', user.uid)
@@ -27,14 +31,21 @@ export default function CustomListsTab() {
       const sorted = raw.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
       setLists(sorted);
       setLoading(false);
+    }, (error) => {
+      console.error("Failed to load collections:", error);
+      setLoading(false);
     });
 
     return unsubscribe;
-  }, [user]);
+  }, [user, isFirebaseReady]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newList.title.trim()) return;
+    if (!isFirebaseReady || !db) {
+      alert("Firebase is still initializing. Please wait a moment.");
+      return;
+    }
 
     try {
       await addDoc(collection(db, 'lists'), {
