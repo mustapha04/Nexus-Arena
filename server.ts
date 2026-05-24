@@ -4,8 +4,36 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import axios from "axios";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, doc, increment } from "firebase/firestore";
 
 dotenv.config();
+
+// Firebase setup for server-side analytics tracking
+let db: any = null;
+try {
+  if (process.env.VITE_FIREBASE_API_KEY) {
+    const firebaseConfig = {
+      apiKey: process.env.VITE_FIREBASE_API_KEY,
+      authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.VITE_FIREBASE_APP_ID,
+      measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
+    };
+    const firebaseApp = initializeApp(firebaseConfig);
+    const databaseId = process.env.VITE_FIREBASE_DATABASE_ID;
+    if (databaseId && databaseId !== '(default)' && databaseId !== '') {
+      db = getFirestore(firebaseApp, databaseId);
+    } else {
+      db = getFirestore(firebaseApp);
+    }
+    console.log("Firebase initialized for server-side analytics tracking.");
+  }
+} catch (error) {
+  console.error("Failed to initialize Firebase on server:", error);
+}
 
 async function startServer() {
   const app = express();
@@ -84,12 +112,69 @@ Sitemap: ${baseUrl}/sitemap.xml`);
   });
 
   // Health check
-  app.get("/api/health", (req, res) => {
+  app.get(["/api/health", "/health"], (req, res) => {
     res.json({ status: "ok" });
   });
 
+  // Track clicks on affiliate links
+  app.post(["/api/analytics/click", "/analytics/click"], async (req, res) => {
+    const { gameId, platform, userId } = req.body;
+    if (!gameId || !platform) {
+      return res.status(400).json({ error: "gameId and platform are required" });
+    }
+
+    try {
+      if (db) {
+        await addDoc(collection(db, "affiliate_clicks"), {
+          game_id: String(gameId),
+          platform: String(platform),
+          user_id: userId || null,
+          clicked_at: new Date().toISOString()
+        });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to track click:", error);
+      res.status(500).json({ error: "Failed to track click" });
+    }
+  });
+
+  // Track game views
+  app.post(["/api/analytics/view", "/analytics/view"], async (req, res) => {
+    const { gameId } = req.body;
+    if (!gameId) {
+      return res.status(400).json({ error: "gameId is required" });
+    }
+
+    try {
+      if (db) {
+        const statsRef = collection(db, "game_stats");
+        const q = query(statsRef, where("game_id", "==", String(gameId)));
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+          const docId = snap.docs[0].id;
+          const docRef = doc(db, "game_stats", docId);
+          await updateDoc(docRef, {
+            views: increment(1)
+          });
+        } else {
+          await addDoc(statsRef, {
+            game_id: String(gameId),
+            views: 1,
+            searches: 0
+          });
+        }
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to track view:", error);
+      res.status(500).json({ error: "Failed to track view" });
+    }
+  });
+
   // Proxy for FreeToGame API (to avoid CORS issues)
-  app.get("/api/games/list", async (req, res) => {
+  app.get(["/api/games/list", "/games/list"], async (req, res) => {
     try {
       const response = await axios.get("https://www.freetogame.com/api/games", {
         params: req.query
@@ -100,7 +185,7 @@ Sitemap: ${baseUrl}/sitemap.xml`);
     }
   });
 
-  app.get("/api/games/details", async (req, res) => {
+  app.get(["/api/games/details", "/games/details"], async (req, res) => {
     try {
       const response = await axios.get("https://www.freetogame.com/api/game", {
         params: req.query
@@ -112,7 +197,7 @@ Sitemap: ${baseUrl}/sitemap.xml`);
   });
 
   // Proxy for CheapShark API
-  app.get("/api/deals", async (req, res) => {
+  app.get(["/api/deals", "/deals"], async (req, res) => {
     try {
       const response = await axios.get("https://www.cheapshark.com/api/1.0/deals", {
         params: req.query
@@ -124,7 +209,7 @@ Sitemap: ${baseUrl}/sitemap.xml`);
   });
 
   // Gemini AI Route
-  app.post("/api/ai/summarize", async (req, res) => {
+  app.post(["/api/ai/summarize", "/ai/summarize"], async (req, res) => {
     const { gameTitle, description } = req.body;
     if (!gameTitle || !description) {
       return res.status(400).json({ error: "Game title and description are required" });
@@ -145,7 +230,7 @@ Sitemap: ${baseUrl}/sitemap.xml`);
     }
   });
 
-  app.post("/api/ai/recommend", async (req, res) => {
+  app.post(["/api/ai/recommend", "/ai/recommend"], async (req, res) => {
     const { favoriteGames, allGames } = req.body;
     try {
       const response = await ai.models.generateContent({

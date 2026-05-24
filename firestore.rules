@@ -4,63 +4,94 @@ service cloud.firestore {
     
     // 1. Helper Primitives
     function isSignedIn() { return request.auth != null; }
-    function isNotBanned() { return isSignedIn() && (!exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) || get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('isBanned', false) != true); }
-    function isVerified() { return isSignedIn() && isNotBanned(); }
+    
+    // Convert email to lowercase and compare safely
+    function isHardcodedAdmin() {
+      return isSignedIn() && 
+             request.auth.token != null && 
+             request.auth.token.email != null && 
+             request.auth.token.email.lower() == 'mustaphaelibrahimi6@gmail.com';
+    }
+    
+    function isAdmin() { 
+      return isHardcodedAdmin() || (
+        isSignedIn() && 
+        exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', 'user') == 'admin'
+      );
+    }
+    
+    function isNotBanned() { 
+      return isSignedIn() && (
+        !exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) || 
+        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('isBanned', false) != true
+      ); 
+    }
+    
+    function isVerified() { 
+      return isSignedIn() && 
+             request.auth.token.email_verified == true && 
+             isNotBanned(); 
+    }
     function isOwner(userId) { return isSignedIn() && (request.auth.uid == userId); }
-    function isAdmin() { return isSignedIn() && (request.auth.token.email == 'mustaphaelibrahimi6@gmail.com' || (exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', 'user') == 'admin')); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
-    // 3. Validation Helpers
+    // 2. Validation Helpers using robust 'in' operator to avoid nested map/keys parsing issues
     function isValidProfile(data) {
-      return data.keys().hasAll(['id', 'email', 'username', 'avatar_url', 'role', 'created_at']) &&
-             data.id is string &&
-             data.email is string &&
-             data.username is string &&
-             data.avatar_url is string &&
-             data.role in ['user', 'admin'] &&
-             data.created_at is string &&
-             (!data.keys().hasAny(['combat_level']) || data.combat_level is int) &&
-             (!data.keys().hasAny(['artifacts_found']) || data.artifacts_found is int) &&
-             (!data.keys().hasAny(['grid_uptime']) || data.grid_uptime is string) &&
-             (!data.keys().hasAny(['core_integrity']) || data.core_integrity is string);
+      return 'id' in data && data.id is string &&
+             'email' in data && data.email is string &&
+             'username' in data && data.username is string &&
+             'avatar_url' in data && data.avatar_url is string &&
+             'role' in data && data.role in ['user', 'admin'] &&
+             'created_at' in data && data.created_at is string &&
+             (!('combat_level' in data) || data.combat_level is int) &&
+             (!('artifacts_found' in data) || data.artifacts_found is int) &&
+             (!('grid_uptime' in data) || data.grid_uptime is string) &&
+             (!('core_integrity' in data) || data.core_integrity is string) &&
+             (!('isBanned' in data) || data.isBanned is bool);
     }
 
-    // 4. Match Blocks
+    // Default catch-all rule for defense in depth
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Match Blocks
 
     // Profiles
     match /profiles/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(userId) && isValidProfile(incoming());
-      allow update: if (isOwner(userId) && isValidProfile(incoming()) && incoming().role == existing().role) || isAdmin();
+      allow create: if isOwner(userId) && isValidProfile(incoming()) && (incoming().role == 'user' || isHardcodedAdmin());
+      allow update: if (isOwner(userId) && isValidProfile(incoming()) && (incoming().role == existing().role || isHardcodedAdmin())) || isAdmin();
     }
 
-    // Lists
+    // Lists (Custom Game Collections)
     match /lists/{listId} {
       allow read: if true;
       allow create: if isVerified() && incoming().user_id == request.auth.uid;
       allow update, delete: if isVerified() && (isOwner(existing().user_id) || isAdmin());
     }
 
-    // Favorites & Wishlists
+    // Favorites & Wishlists (with guards for null resource and robust global list operations for admins)
     match /favorites/{favId} {
-      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
-      allow get: if isSignedIn();
-      allow create: if isVerified() && incoming().user_id == request.auth.uid;
-      allow delete: if isOwner(existing().user_id) || isAdmin();
+      allow list: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
+      allow create, update: if isVerified() && incoming().user_id == request.auth.uid;
+      allow delete: if isVerified() && (isOwner(existing().user_id) || isAdmin());
     }
     
     match /wishlists/{wishId} {
-      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
-      allow get: if isSignedIn();
-      allow create: if isVerified() && incoming().user_id == request.auth.uid;
-      allow delete: if isOwner(existing().user_id) || isAdmin();
+      allow list: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
+      allow create, update: if isVerified() && incoming().user_id == request.auth.uid;
+      allow delete: if isVerified() && (isOwner(existing().user_id) || isAdmin());
     }
 
     // Game Stats
     match /game_stats/{statId} {
       allow read: if true;
-      allow create, update: if true; // In real app, we'd use a cloud function or stricter increment rules
+      allow create, update: if true; 
     }
 
     // Homepage Config
@@ -69,17 +100,21 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Ratings
+    // Ratings in standard details
     match /ratings/{ratingId} {
       allow read: if true;
       allow create, update: if isVerified() && incoming().user_id == request.auth.uid;
+      allow delete: if isVerified() && (isOwner(existing().user_id) || isAdmin());
     }
 
-    // Comments
+    // Comments Moderation and creation
     match /comments/{commentId} {
       allow read: if true;
       allow create: if isVerified() && incoming().user_id == request.auth.uid && incoming().username is string && incoming().content.size() <= 1000;
-      allow update: if isVerified() && (isOwner(existing().user_id) || isAdmin()) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'likes']);
+      allow update: if isVerified() && (
+        ((isOwner(existing().user_id) || isAdmin()) && incoming().diff(existing()).affectedKeys().hasOnly(['content'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'liked_by']))
+      );
       allow delete: if isVerified() && (isOwner(existing().user_id) || isAdmin());
     }
 
@@ -91,13 +126,14 @@ service cloud.firestore {
 
     // Affiliate Clicks
     match /affiliate_clicks/{clickId} {
-      allow create: if true; // Public can click
+      allow create: if true; 
       allow read: if isAdmin();
     }
 
     // Notifications
     match /notifications/{notifId} {
-      allow read, update: if isOwner(resource.data.user_id);
+      allow read: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && isOwner(resource.data.user_id);
       allow create: if isAdmin();
     }
   }

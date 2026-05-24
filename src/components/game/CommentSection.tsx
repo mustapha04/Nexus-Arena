@@ -27,8 +27,7 @@ export default function CommentSection({ gameId }: Props) {
 
     const q = query(
       collection(db, 'comments'),
-      where('game_id', '==', gameId),
-      orderBy('created_at', 'desc')
+      where('game_id', '==', gameId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -36,7 +35,8 @@ export default function CommentSection({ gameId }: Props) {
         id: doc.id,
         ...doc.data()
       })) as Comment[];
-      setComments(data);
+      const sorted = data.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      setComments(sorted);
       setLoading(false);
     }, (error) => {
       console.error("Failed to load comments", error);
