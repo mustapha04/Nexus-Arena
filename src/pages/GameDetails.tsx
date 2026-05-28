@@ -81,7 +81,7 @@ export default function GameDetails() {
     if (game && isFirebaseReady && db) {
       const fetchAffiliate = async () => {
         try {
-          const q = query(collection(db, 'affiliate_links'), where('game_id', '==', String(game.id)));
+          const q = query(collection(db, 'affiliate_links'), where('game_id', 'in', [String(game.id), 'all']));
           const snap = await getDocs(q);
           setAffiliateLinks(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AffiliateLink)));
         } catch (e) {
@@ -120,6 +120,47 @@ export default function GameDetails() {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     });
+  };
+
+  const getActiveAffiliateLink = () => {
+    const specific = affiliateLinks.find(link => link.game_id === String(game?.id) && link.is_active !== false);
+    if (specific) return specific;
+    return affiliateLinks.find(link => link.game_id === 'all' && link.is_active !== false);
+  };
+
+  const getMainCtaUrl = () => {
+    const activeLink = getActiveAffiliateLink();
+    return activeLink ? activeLink.affiliate_url : (game?.game_url || '#');
+  };
+
+  const handleMainCtaClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const activeLink = getActiveAffiliateLink();
+    if (activeLink) {
+      try {
+        await gameService.trackClick(activeLink.game_id, activeLink.platform, user?.uid);
+      } catch (err) {
+        console.error("Failed to track main CTA affiliate click", err);
+      }
+    }
+  };
+
+  const getDiscoveredAffiliateLinks = () => {
+    const activeLinks = affiliateLinks.filter(l => l.is_active !== false);
+    const finalLinksMap = new Map<string, AffiliateLink>();
+
+    activeLinks
+      .filter(l => l.game_id === 'all')
+      .forEach(link => {
+        finalLinksMap.set(link.platform.toLowerCase(), link);
+      });
+
+    activeLinks
+      .filter(l => l.game_id === String(game?.id))
+      .forEach(link => {
+        finalLinksMap.set(link.platform.toLowerCase(), link);
+      });
+
+    return Array.from(finalLinksMap.values());
   };
 
   if (loading) return (
@@ -228,7 +269,8 @@ export default function GameDetails() {
               
               <div className="flex flex-wrap gap-4 items-center">
                 <a 
-                  href={game.game_url} 
+                  href={getMainCtaUrl()} 
+                  onClick={handleMainCtaClick}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 px-10 py-5 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-blue-400 hover:scale-105 active:scale-95 shadow-2xl"
@@ -238,14 +280,14 @@ export default function GameDetails() {
                   <span>Play Gratis</span>
                 </a>
                 
-                {affiliateLinks.map(link => (
+                {getDiscoveredAffiliateLinks().map(link => (
                   <button
                     key={link.id}
                     onClick={() => handleAffiliateClick(link)}
                     className="flex items-center gap-3 px-10 py-5 bg-blue-600 rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-blue-500 hover:scale-105 active:scale-95 shadow-2xl"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    <span>Get on {link.platform}</span>
+                    <span>{link.platform === 'All' ? 'Play Game' : `Get on ${link.platform}`}</span>
                   </button>
                 ))}
 
@@ -448,7 +490,8 @@ export default function GameDetails() {
 
             <div className="pt-4">
               <a 
-                href={game.game_url}
+                href={getMainCtaUrl()}
+                onClick={handleMainCtaClick}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-3 py-4 bg-white/5 hover:bg-white/10 text-white border border-white/20 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"

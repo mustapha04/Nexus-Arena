@@ -116,7 +116,8 @@
         "id": { "type": "string" },
         "game_id": { "type": "string" },
         "platform": { "type": "string" },
-        "affiliate_url": { "type": "string" }
+        "affiliate_url": { "type": "string" },
+        "is_active": { "type": "boolean" }
       },
       "required": ["game_id", "platform", "affiliate_url"]
     },

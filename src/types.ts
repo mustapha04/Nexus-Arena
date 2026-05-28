@@ -97,6 +97,7 @@ export interface AffiliateLink {
   affiliate_url: string;
   clicks: number;
   created_at: string;
+  is_active?: boolean;
 }
 
 export interface AffiliateClick {

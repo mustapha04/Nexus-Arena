@@ -5,12 +5,13 @@ service cloud.firestore {
     // 1. Helper Primitives
     function isSignedIn() { return request.auth != null; }
     
-    // Convert email to lowercase and compare safely
+    // Compare email safely case-insensitively
     function isHardcodedAdmin() {
       return isSignedIn() && 
              request.auth.token != null && 
              request.auth.token.email != null && 
-             request.auth.token.email.lower() == 'mustaphaelibrahimi6@gmail.com';
+             (request.auth.token.email == 'mustaphaelibrahimi6@gmail.com' || 
+              request.auth.token.email.matches('(?i)^mustaphaelibrahimi6@gmail\\.com$'));
     }
     
     function isAdmin() { 
@@ -29,9 +30,7 @@ service cloud.firestore {
     }
     
     function isVerified() { 
-      return isSignedIn() && 
-             request.auth.token.email_verified == true && 
-             isNotBanned(); 
+      return isSignedIn() && isNotBanned(); 
     }
     function isOwner(userId) { return isSignedIn() && (request.auth.uid == userId); }
     function incoming() { return request.resource.data; }
@@ -61,7 +60,7 @@ service cloud.firestore {
 
     // Profiles
     match /profiles/{userId} {
-      allow read: if isSignedIn();
+      allow get, list: if isSignedIn();
       allow create: if isOwner(userId) && isValidProfile(incoming()) && (incoming().role == 'user' || isHardcodedAdmin());
       allow update: if (isOwner(userId) && isValidProfile(incoming()) && (incoming().role == existing().role || isHardcodedAdmin())) || isAdmin();
     }
@@ -75,15 +74,15 @@ service cloud.firestore {
 
     // Favorites & Wishlists (with guards for null resource and robust global list operations for admins)
     match /favorites/{favId} {
-      allow list: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
-      allow get: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (isAdmin() || resource == null || resource.data.user_id == request.auth.uid);
+      allow get: if isSignedIn() && (isAdmin() || resource == null || resource.data.user_id == request.auth.uid);
       allow create, update: if isVerified() && incoming().user_id == request.auth.uid;
       allow delete: if isVerified() && (isOwner(existing().user_id) || isAdmin());
     }
     
     match /wishlists/{wishId} {
-      allow list: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
-      allow get: if isSignedIn() && (resource == null || resource.data.user_id == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (isAdmin() || resource == null || resource.data.user_id == request.auth.uid);
+      allow get: if isSignedIn() && (isAdmin() || resource == null || resource.data.user_id == request.auth.uid);
       allow create, update: if isVerified() && incoming().user_id == request.auth.uid;
       allow delete: if isVerified() && (isOwner(existing().user_id) || isAdmin());
     }
